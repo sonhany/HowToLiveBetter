@@ -494,8 +494,6 @@ abbr.term:hover{border-bottom-color:var(--brand-1);color:var(--brand-1)}
     <p>正文与标签来自仓库 <a href="book/">book/</a> 下的 34 个文件，改正文即改这里。</p>
   </div>
   <div class="group ad">
-    <div class="gt">广告</div>
-    <a href="https://4.mcyyy.com" target="_blank" rel="noopener"><img src="ads/mcyyy-side.webp" alt="永恒世界 Minecraft 服务器，游戏地址 1.mcyyy.com" width="624" height="312" loading="lazy"></a>
     <button type="button" class="tip-open" id="tip-open">觉得有用？请作者喝杯咖啡</button>
   </div>
 </aside>
@@ -1606,7 +1604,13 @@ document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !TIP.hid
   const EMBED = window.__CORPUS__;
   try {
     if (!EMBED && location.protocol === 'file:') throw new Error('file');
-    const md = EMBED ? EMBED.readme : await readText('README.md');
+    const md = EMBED ? EMBED.readme : await (async () => {
+      // Vercel 上传会排除根目录 README.md，GitHub Pages 不会；先试原名再回退小写副本
+      for (const p of ['README.md', 'readme.md']) {
+        try { return await readText(p); } catch (e) { if (/http 404/.test(String(e.message))) continue; throw e; }
+      }
+      throw new Error('http 404：README.md / readme.md 都取不到');
+    })();
     const files = [...new Set(Array.from(md.matchAll(/\]\((book\/[^)]+\.md)\)/g), m => m[1]))].sort();
     if (!files.length) throw new Error('empty');
     // 更新记录取不到不影响读正文，只是不显示「最近更新」
